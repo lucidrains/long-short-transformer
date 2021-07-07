@@ -1,4 +1,4 @@
-## Long-Short Transformer
+## Long-Short Transformer (wip)
 
 Implementation of <a href="https://arxiv.org/abs/2107.02192">Long-Short Transformer</a>, combining local and global inductive biases for attention over long sequences, in Pytorch
 
