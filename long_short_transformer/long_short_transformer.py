@@ -51,11 +51,12 @@ class PreNorm(nn.Module):
         return self.fn(x, **kwargs)
 
 class FeedForward(nn.Module):
-    def __init__(self, dim, mult = 4):
+    def __init__(self, dim, mult = 4, dropout = 0.):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(dim, dim * mult),
             nn.GELU(),
+            nn.Dropout(dropout),
             nn.Linear(dim * mult, dim)
         )
 
@@ -73,7 +74,8 @@ class LongShortAttention(nn.Module):
         window_size = 128,
         pos_emb = None,
         segment_size = 16,
-        r = 1
+        r = 1,
+        dropout = 0.
     ):
         super().__init__()
         assert not (causal and r >= segment_size), 'r should be less than segment size, if autoregressive'
@@ -93,6 +95,8 @@ class LongShortAttention(nn.Module):
         self.global_norm = nn.LayerNorm(dim_head)
 
         self.pos_emb = default(pos_emb, RotaryEmbedding(dim_head))
+
+        self.attn_dropout = nn.Dropout(dropout)
 
         self.to_q = nn.Linear(dim, inner_dim, bias = False)
         self.to_kv = nn.Linear(dim, inner_dim, bias = False)
@@ -228,6 +232,7 @@ class LongShortAttention(nn.Module):
         # attention
 
         attn = sim.softmax(dim = -1)
+        attn = self.attn_dropout(attn)
 
         # aggregate values (same as keys, since tied) and project out
 
@@ -252,7 +257,9 @@ class LongShortTransformer(nn.Module):
         heads = 8,
         ff_mult = 4,
         segment_size = None,
-        r = None
+        r = None,
+        ff_dropout = 0.,
+        attn_dropout = 0.
     ):
         super().__init__()
         self.max_seq_len = max_seq_len
@@ -271,8 +278,8 @@ class LongShortTransformer(nn.Module):
         self.layers = nn.ModuleList([])
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
-                PreNorm(dim, LongShortAttention(dim = dim, heads = heads, dim_head = dim_head, window_size = window_size, causal = causal, pos_emb = pos_emb, segment_size = segment_size, r = r)),
-                PreNorm(dim, FeedForward(dim = dim, mult = ff_mult))
+                PreNorm(dim, LongShortAttention(dim = dim, heads = heads, dim_head = dim_head, window_size = window_size, causal = causal, pos_emb = pos_emb, segment_size = segment_size, r = r, dropout = attn_dropout)),
+                PreNorm(dim, FeedForward(dim = dim, mult = ff_mult, dropout = ff_dropout))
             ]))
 
         self.to_logits = nn.Sequential(
