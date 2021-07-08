@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
   name = 'long-short-transformer',
   packages = find_packages(),
-  version = '0.0.2',
+  version = '0.0.3',
   license='MIT',
   description = 'Long Short Transformer - Pytorch',
   author = 'Phil Wang',
@@ -17,6 +17,7 @@ setup(
   ],
   install_requires=[
     'einops>=0.3',
+    'rotary-embedding-torch',
     'torch>=1.6'
   ],
   classifiers=[

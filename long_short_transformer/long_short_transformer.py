@@ -5,7 +5,7 @@ import torch
 from torch import nn, einsum
 import torch.nn.functional as F
 
-from long_short_transformer.rotary import RotaryEmbedding, apply_rotary_emb
+from rotary_embedding_torch import RotaryEmbedding, apply_rotary_emb
 
 from einops import rearrange, repeat
 
@@ -131,15 +131,16 @@ class LongShortAttention(nn.Module):
 
         seq_range = torch.arange(padded_len, device = device)
 
+        # split heads
+
+        q, kv = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h = h), qkv)
+
         # rotary embedding
 
         if exists(self.pos_emb):
             rotary_emb = self.pos_emb(seq_range, cache_key = padded_len)
-            qkv = map(lambda t: apply_rotary_emb(rotary_emb, t), (qkv))
-
-        # split heads
-
-        q, kv = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h = h), qkv)
+            rotary_emb = rearrange(rotary_emb, 'n d -> () n d')
+            q, kv = map(lambda t: apply_rotary_emb(rotary_emb, t), (q, kv))
 
         # scale queries
 
