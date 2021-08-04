@@ -167,7 +167,7 @@ class LongShortAttention(nn.Module):
             pkv = self.to_dynamic_proj(gkv)
 
             if exists(mask):
-                pmask = rearrange(mask, 'b (n s) -> b n s', s = s)
+                pmask = repeat(mask, 'b (n s) -> (b h) n s', s = s, h = h)
                 pkv.masked_fill_(~pmask[..., None], mask_value)
 
             pkv = pkv.softmax(dim = -2)
